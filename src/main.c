@@ -1,7 +1,7 @@
 #include <ncurses.h>
 #include <stdio.h>
 
-static void draw_grid(void);
+static void draw_grid(int x, int y);
 static void movement(int key, int *x, int *y);
 
 int main(void) {
@@ -12,41 +12,52 @@ int main(void) {
     keypad(stdscr, TRUE);
     curs_set(FALSE);
 
-    draw_grid();
+    int x, y;
 
-    int x = 150;
-    int y = 35;
+    getmaxyx(stdscr, y, x);
 
-    int *px = &x;
-    int *py = &y;
+    int x_offset = x / 4;
+    int y_offset = y / 10;
 
-    mvprintw(y, x, "O");
+    draw_grid(x_offset, y_offset);
+
+    int x_middle = x / 2;
+    int y_middle = y / 2;
+
+    int *px_middle = &x_middle;
+    int *py_middle = &y_middle;
+
+    mvprintw(y_middle, x_middle, "O");
     refresh();
     
     int c;
-    while ((c = getch()) != 3)
-        movement(c, px, py);
+    while ((c = getch()) != 'q')
+        movement(c, px_middle, py_middle);
     
     endwin();
 
     return 0;
 }
 
-void draw_grid(void) {
-    for (int x = 100, y = 10; x < 201; ++x) {
-        mvprintw(y, x, "_");
+void draw_grid(int x, int y) {
+    int x_copy, y_copy;
+    int limit_x = (x*4) - x;
+    int limit_y = (y*10);
+    
+    for (x_copy = x, y_copy = y - 1; x_copy < limit_x + 1; ++x_copy) {
+        mvprintw(y_copy, x_copy, "_");
     }
     
-    for (int x = 100, y = 60; x < 201; ++x) {
-        mvprintw(y, x, "-");
+    for (x_copy = x, y_copy = y * 10; x_copy < limit_x + 1; ++x_copy) {
+        mvprintw(y_copy, x_copy, "-");
     }
 
-    for (int x = 100, y = 11; y < 60; ++y) {
-        mvprintw(y, x, "|");
+    for (x_copy = x, y_copy = y; y_copy < limit_y; ++y_copy) {
+        mvprintw(y_copy, x_copy, "|");
     }
 
-    for (int x = 200, y = 11; y < 60; ++y) {
-        mvprintw(y, x, "|");
+    for (x_copy = limit_x, y_copy = y; y_copy < limit_y; ++y_copy) {
+        mvprintw(y_copy, x_copy, "|");
     }
 
     refresh();
