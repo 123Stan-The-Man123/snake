@@ -1,8 +1,21 @@
+#include <math.h>
 #include <ncurses.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
 
-static void draw_grid(int x, int y);
+#define SNAKE_COLOUR 1
+#define APPLE_COLOUR 2
+
+static void draw_grid(int x, int y, int score);
 static void movement(int key, int *x, int *y);
+static void spawn_apple(int *x, int *y, int x_offset, int y_offset, int *score);
+
+typedef struct snake_part {
+    int x;
+    int y;
+    struct snake_part *next;
+} head;
 
 int main(void) {
     initscr();
@@ -12,77 +25,124 @@ int main(void) {
     keypad(stdscr, TRUE);
     curs_set(FALSE);
 
-    int x, y;
+    if (has_colors()) {
+        start_color();
+        init_pair(SNAKE_COLOUR, COLOR_GREEN, COLOR_BLACK);
+        init_pair(APPLE_COLOUR, COLOR_RED, COLOR_BLACK);
+    }
+    else {
+        endwin();
+        printf("Your terminal does not support colors.\n");
+        exit(1);
+    }
+
+    int x, y, score;
+    score = 0;
 
     getmaxyx(stdscr, y, x);
 
-    int x_offset = x / 4;
+    int x_offset = x / 10;
     int y_offset = y / 10;
 
-    draw_grid(x_offset, y_offset);
+    int x_pos = x / 2;
+    int y_pos = y / 2;
 
-    int x_middle = x / 2;
-    int y_middle = y / 2;
+    int *px_pos = &x_pos;
+    int *py_pos = &y_pos;
 
-    int *px_middle = &x_middle;
-    int *py_middle = &y_middle;
+    attron(COLOR_PAIR(SNAKE_COLOUR));
+    mvaddch(y_pos, x_pos, 'O');
+    attroff(COLOR_PAIR(SNAKE_COLOUR));
 
-    mvprintw(y_middle, x_middle, "O");
-    refresh();
+    srand(time(NULL));
+    int random_x, random_y;
+    int *prandom_x = &random_x;
+    int *prandom_y = &random_y;
+    spawn_apple(prandom_x, prandom_y, x_offset, y_offset, &score);
+
+    draw_grid(x_offset, y_offset, score);
     
     int c;
-    while ((c = getch()) != 'q')
-        movement(c, px_middle, py_middle);
-    
+    while ((c = getch()) != 'q') {
+        if (x_pos == random_x && y_pos == random_y)
+            spawn_apple(prandom_x, prandom_y, x_offset, y_offset, &score);
+        
+        movement(c, px_pos, py_pos);
+    }
+
     endwin();
 
     return 0;
 }
 
-void draw_grid(int x, int y) {
+void draw_grid(int x, int y, int score) {
     int x_copy, y_copy;
-    int limit_x = (x*4) - x;
-    int limit_y = (y*10);
+    int limit_x = x * 7;
+    int limit_y = y * 9;
+    int displacement = 0;
     
-    for (x_copy = x, y_copy = y - 1; x_copy < limit_x + 1; ++x_copy) {
-        mvprintw(y_copy, x_copy, "_");
-    }
+    for (x_copy = x * 3, y_copy = y - 1; x_copy < limit_x + 1; ++x_copy)
+        mvprintw(y_copy, x_copy, "X");
     
-    for (x_copy = x, y_copy = y * 10; x_copy < limit_x + 1; ++x_copy) {
-        mvprintw(y_copy, x_copy, "-");
-    }
+    for (x_copy = x * 3, y_copy = limit_y; x_copy < limit_x + 1; ++x_copy)
+        mvprintw(y_copy, x_copy, "X");
 
-    for (x_copy = x, y_copy = y; y_copy < limit_y; ++y_copy) {
-        mvprintw(y_copy, x_copy, "|");
-    }
+    for (x_copy = x * 3, y_copy = y; y_copy < limit_y; ++y_copy)
+        mvprintw(y_copy, x_copy, "X");
 
-    for (x_copy = limit_x, y_copy = y; y_copy < limit_y; ++y_copy) {
-        mvprintw(y_copy, x_copy, "|");
-    }
+    for (x_copy = limit_x, y_copy = y; y_copy < limit_y; ++y_copy)
+        mvprintw(y_copy, x_copy, "X");
+
+    if (score - (pow(10, displacement)) >= 9)
+        ++displacement;
+    
+    mvprintw(limit_y + 1, x * 3, "Score:");
+    mvprintw(limit_y + 1, limit_x - displacement, "%d", score);
 
     refresh();
 }
 
 void movement(int key, int *x, int *y) {
+    mvaddch(*y, *x, ' ');
+
     switch (key) {
         case KEY_UP:
-            mvaddch(*y, *x, ' ');
-            mvaddch(--*y, *x, 'O');
+            --*y;
             break;
         
         case KEY_DOWN:
-            mvaddch(*y, *x, ' ');
-            mvaddch(++*y, *x, 'O');
+            ++*y;
             break;
         
         case KEY_LEFT:
-            mvaddch(*y, *x, ' ');
-            mvaddch(*y, --*x, 'O');
+            --*x;
             break;
         
         case KEY_RIGHT:
-            mvaddch(*y, *x, ' ');
-            mvaddch(*y, ++*x, 'O');
+            ++*x;
             break;
     }
+
+    attron(COLOR_PAIR(SNAKE_COLOUR));
+    mvaddch(*y, *x, 'O');
+    attroff(COLOR_PAIR(SNAKE_COLOUR));
+
+    refresh();
+}
+
+static void spawn_apple(int *x, int *y, int x_offset, int y_offset, int *score) {
+    char character;
+    
+    do {
+        *x = rand() % ((x_offset * 7 - 1) + 1 - (x_offset * 3 + 1)) + (x_offset * 3 + 1);
+        *y = rand() % ((y_offset * 9) - (y_offset)) + y_offset;
+        chtype ch = mvwinch(stdscr, *y, *x);
+        character = ch & A_CHARTEXT;
+    } while (character != ' ');
+
+    attron(COLOR_PAIR(APPLE_COLOUR));
+    mvaddch(*y, *x, 'A');
+    attroff(COLOR_PAIR(APPLE_COLOUR));
+
+    draw_grid(x_offset, y_offset, ++*score);
 }

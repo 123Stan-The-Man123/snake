@@ -4,4 +4,4 @@ SRC = src/main.c
 
 bin/main: $(SRC)
 	mkdir -p bin
-	$(CC) $(CFLAGS) -o $@ $^ -lncurses
+	$(CC) $(CFLAGS) -o $@ $^ -lm -lncurses
