@@ -4,12 +4,15 @@
 #include <stdlib.h>
 #include <time.h>
 
+#define WIN 0
+#define LOSS 1
 #define SNAKE_COLOUR 1
 #define APPLE_COLOUR 2
 
 static void draw_grid(int x, int y, int score);
 static void movement(int key, int *x, int *y);
 static void spawn_apple(int *x, int *y, int x_offset, int y_offset, int *score);
+static void die(int condition, int score);
 
 typedef struct snake_part {
     int x;
@@ -37,7 +40,7 @@ int main(void) {
     }
 
     int x, y, score;
-    score = 0;
+    score = -10;
 
     getmaxyx(stdscr, y, x);
 
@@ -64,13 +67,18 @@ int main(void) {
     
     int c;
     while ((c = getch()) != 'q') {
+        movement(c, px_pos, py_pos);
+
         if (x_pos == random_x && y_pos == random_y)
             spawn_apple(prandom_x, prandom_y, x_offset, y_offset, &score);
         
-        movement(c, px_pos, py_pos);
+        if (x_pos <= x_offset * 3 || x_pos >= x_offset * 7 || y_pos <= y_offset-1 || y_pos >= y_offset * 9) {
+            break;
+        }
     }
 
     endwin();
+    die(LOSS, score);
 
     return 0;
 }
@@ -79,7 +87,7 @@ void draw_grid(int x, int y, int score) {
     int x_copy, y_copy;
     int limit_x = x * 7;
     int limit_y = y * 9;
-    int displacement = 0;
+    static int displacement = 0;
     
     for (x_copy = x * 3, y_copy = y - 1; x_copy < limit_x + 1; ++x_copy)
         mvprintw(y_copy, x_copy, "X");
@@ -93,7 +101,7 @@ void draw_grid(int x, int y, int score) {
     for (x_copy = limit_x, y_copy = y; y_copy < limit_y; ++y_copy)
         mvprintw(y_copy, x_copy, "X");
 
-    if (score - (pow(10, displacement)) >= 9)
+    if ((score/10) / (pow(10, displacement)) >= 1)
         ++displacement;
     
     mvprintw(limit_y + 1, x * 3, "Score:");
@@ -144,5 +152,13 @@ static void spawn_apple(int *x, int *y, int x_offset, int y_offset, int *score) 
     mvaddch(*y, *x, 'A');
     attroff(COLOR_PAIR(APPLE_COLOUR));
 
-    draw_grid(x_offset, y_offset, ++*score);
+    draw_grid(x_offset, y_offset, *score += 10);
+}
+
+void die(int condition, int score) {
+    if (condition == WIN)
+        printf("You won!\nYour total score is: %d\n", score);
+    
+    if (condition == LOSS)
+        printf("You lost!\nYour total score is: %d\n", score);
 }
