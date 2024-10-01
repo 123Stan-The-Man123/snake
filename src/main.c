@@ -82,7 +82,8 @@ int main(void) {
         if (c != ERR && status == 0)
             prev_c = c;
         
-        usleep(130000);
+        if (status == 0)
+            usleep(130000);
     }
 
     endwin();
