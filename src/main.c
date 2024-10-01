@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <unistd.h>
 
 #define WIN 0
 #define LOSS 1
@@ -10,7 +11,7 @@
 #define APPLE_COLOUR 2
 
 static void draw_grid(int x, int y, int score);
-static void movement(int key, int *x, int *y);
+static int movement(int key, int conflict_key, int *x, int *y);
 static void spawn_apple(int *x, int *y, int x_offset, int y_offset, int *score);
 static void die(int condition, int score);
 
@@ -27,6 +28,7 @@ int main(void) {
     intrflush(stdscr, FALSE);
     keypad(stdscr, TRUE);
     curs_set(FALSE);
+    nodelay(stdscr, TRUE);
 
     if (has_colors()) {
         start_color();
@@ -65,9 +67,10 @@ int main(void) {
 
     draw_grid(x_offset, y_offset, score);
     
-    int c;
+    int c, status;
+    int prev_c = ERR;
     while ((c = getch()) != 'q') {
-        movement(c, px_pos, py_pos);
+        status = movement(prev_c, c, px_pos, py_pos);
 
         if (x_pos == random_x && y_pos == random_y)
             spawn_apple(prandom_x, prandom_y, x_offset, y_offset, &score);
@@ -75,6 +78,11 @@ int main(void) {
         if (x_pos <= x_offset * 3 || x_pos >= x_offset * 7 || y_pos <= y_offset-1 || y_pos >= y_offset * 9) {
             break;
         }
+
+        if (c != ERR && status == 0)
+            prev_c = c;
+        
+        usleep(130000);
     }
 
     endwin();
@@ -110,23 +118,36 @@ void draw_grid(int x, int y, int score) {
     refresh();
 }
 
-void movement(int key, int *x, int *y) {
+int movement(int key, int conflict_key, int *x, int *y) {
     mvaddch(*y, *x, ' ');
+    int conflicted = 0;
 
     switch (key) {
         case KEY_UP:
+            if (conflict_key == KEY_DOWN)
+                conflicted = 1;
+            
             --*y;
             break;
         
         case KEY_DOWN:
+            if (conflict_key == KEY_UP)
+                conflicted = 1;
+            
             ++*y;
             break;
         
         case KEY_LEFT:
+            if (conflict_key == KEY_RIGHT)
+                conflicted = 1;
+            
             --*x;
             break;
         
         case KEY_RIGHT:
+            if (conflict_key == KEY_LEFT)
+                conflicted = 1;
+            
             ++*x;
             break;
     }
@@ -136,6 +157,11 @@ void movement(int key, int *x, int *y) {
     attroff(COLOR_PAIR(SNAKE_COLOUR));
 
     refresh();
+
+    if (conflicted)
+        return -1;
+    
+    return 0;
 }
 
 static void spawn_apple(int *x, int *y, int x_offset, int y_offset, int *score) {
