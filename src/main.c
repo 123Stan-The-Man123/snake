@@ -7,6 +7,7 @@
 
 #define WIN 0
 #define LOSS 1
+#define QUIT 2
 #define SNAKE_COLOUR 1
 #define APPLE_COLOUR 2
 
@@ -15,11 +16,11 @@ static int movement(int key, int conflict_key, int *x, int *y);
 static void spawn_apple(int *x, int *y, int x_offset, int y_offset, int *score);
 static void die(int condition, int score);
 
-typedef struct snake_part {
+struct snake_part {
     int x;
     int y;
     struct snake_part *next;
-} head;
+};
 
 int main(void) {
     initscr();
@@ -87,7 +88,11 @@ int main(void) {
     }
 
     endwin();
-    die(LOSS, score);
+
+    if (c == 'q')
+        die(QUIT, score);
+    else
+        die(LOSS, score);
 
     return 0;
 }
@@ -188,4 +193,7 @@ void die(int condition, int score) {
     
     if (condition == LOSS)
         printf("You lost!\nYour total score is: %d\n", score);
+    
+    if (condition == QUIT)
+        printf("Your total score is: %d\n", score);
 }
