@@ -10,17 +10,18 @@
 #define QUIT 2
 #define SNAKE_COLOUR 1
 #define APPLE_COLOUR 2
-
-static void draw_grid(int x, int y, int score);
-static int movement(int key, int conflict_key, int *x, int *y);
-static void spawn_apple(int *x, int *y, int x_offset, int y_offset, int *score);
-static void die(int condition, int score);
-
 struct snake_part {
     int x;
     int y;
     struct snake_part *next;
 };
+
+static void draw_grid(int x, int y, int score);
+static int movement(int key, int conflict_key, int *x, int *y);
+static void manage_snake(struct snake_part *snake_start, int x, int y);
+static void print_snake(struct snake_part *snake_start);
+static void spawn_apple(int *x, int *y, int x_offset, int y_offset, int *score);
+static void die(int condition, int score);
 
 int main(void) {
     initscr();
@@ -56,8 +57,30 @@ int main(void) {
     int *px_pos = &x_pos;
     int *py_pos = &y_pos;
 
+    struct snake_part *snake_start = malloc(sizeof(struct snake_part));
+    struct snake_part *current_part = snake_start;
+
+    for (int i = 2; i >= 0; --i) {
+        current_part->x = x_pos - i;
+        current_part->y = y_pos; 
+
+        if (i != 0) {
+            current_part->next = malloc(sizeof(struct snake_part));
+            current_part = current_part->next;
+        }
+        
+        else
+            current_part->next = NULL;
+    }
+
+    current_part = snake_start;
+
     attron(COLOR_PAIR(SNAKE_COLOUR));
-    mvaddch(y_pos, x_pos, 'O');
+    while (current_part != NULL) {
+        mvaddch(current_part->y, current_part->x, 'O');
+        current_part = current_part->next;
+    }
+
     attroff(COLOR_PAIR(SNAKE_COLOUR));
 
     srand(time(NULL));
@@ -72,6 +95,8 @@ int main(void) {
     int prev_c = ERR;
     while ((c = getch()) != 'q') {
         status = movement(prev_c, c, px_pos, py_pos);
+        manage_snake(snake_start, x_pos, y_pos);
+        print_snake(snake_start);
 
         if (x_pos == random_x && y_pos == random_y)
             spawn_apple(prandom_x, prandom_y, x_offset, y_offset, &score);
@@ -93,6 +118,15 @@ int main(void) {
         die(QUIT, score);
     else
         die(LOSS, score);
+    
+    current_part = snake_start;
+    struct snake_part *prev_part = current_part;
+
+    while (current_part != NULL) {
+        current_part = current_part->next;
+        free(prev_part);
+        prev_part = current_part;
+    }
 
     return 0;
 }
@@ -168,6 +202,28 @@ int movement(int key, int conflict_key, int *x, int *y) {
         return -1;
     
     return 0;
+}
+
+void manage_snake(struct snake_part *current_part, int x, int y) {
+    mvaddch(current_part->y, current_part->x, ' ');
+
+    while (current_part->next != NULL) {
+        current_part->x = current_part->next->x;
+        current_part->y = current_part->next->y;
+        current_part = current_part->next;
+    }
+
+    current_part->x = x;
+    current_part->y = y;
+}
+
+static void print_snake(struct snake_part *current_part) {
+    while (current_part != NULL) {
+        attron(COLOR_PAIR(SNAKE_COLOUR));
+        mvaddch(current_part->y, current_part->x, 'O');
+        attroff(COLOR_PAIR(SNAKE_COLOUR));
+        current_part = current_part->next;
+    }
 }
 
 static void spawn_apple(int *x, int *y, int x_offset, int y_offset, int *score) {
