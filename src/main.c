@@ -50,6 +50,12 @@ int main(void) {
 
     getmaxyx(stdscr, y, x);
 
+    if (x < 183 || y < 32) {
+        endwin();
+        printf("Screen too small. Try making the terminal window bigger or the terminal font smaller.\n");
+        return 1;
+    }
+
     int x_offset = x / 10;
     int y_offset = y / 10;
 
