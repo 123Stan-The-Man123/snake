@@ -19,7 +19,7 @@ struct snake_part {
 
 static void draw_grid(int x, int y, int score);
 static int movement(int key, int conflict_key, int *x, int *y);
-static void manage_snake(struct snake_part *snake_start, int x, int y);
+static int manage_snake(struct snake_part *snake_start, int x, int y);
 static struct snake_part *grow_snake(struct snake_part *snake_start);
 static void spawn_apple(int *x, int *y, int x_offset, int y_offset, int *score);
 static bool collision(struct snake_part *snake_start, int x, int y);
@@ -77,6 +77,8 @@ int main(void) {
 
     current_part = snake_start;
 
+    int area = ((x_offset * 7) - (x_offset * 3) - 2) * ((y_offset * 9) - y_offset - 2);
+
     attron(COLOR_PAIR(SNAKE_COLOUR));
     while (current_part != NULL) {
         mvaddch(current_part->y, current_part->x, 'O');
@@ -107,7 +109,10 @@ int main(void) {
             snake_start = grow_snake(snake_start);
         }
         
-        manage_snake(snake_start, x_pos, y_pos);
+        if (manage_snake(snake_start, x_pos, y_pos) >= area) {
+            c = 'w';
+            break;
+        }
         
         if (x_pos <= x_offset * 3 || x_pos >= x_offset * 7 || y_pos <= y_offset-1 || y_pos >= y_offset * 9) {
             break;
@@ -127,6 +132,8 @@ int main(void) {
 
     if (c == 'q')
         die(QUIT, score);
+    else if (c == 'w')
+        die(WIN, score);
     else
         die(LOSS, score);
     
@@ -213,11 +220,13 @@ int movement(int key, int conflict_key, int *x, int *y) {
     return 0;
 }
 
-void manage_snake(struct snake_part *current_part, int x, int y) {
+int manage_snake(struct snake_part *current_part, int x, int y) {
     mvaddch(current_part->y, current_part->x, ' ');
+    int count = 0;
 
     attron(COLOR_PAIR(SNAKE_COLOUR));
     while (current_part->next != NULL) {
+        ++count;
         current_part->x = current_part->next->x;
         current_part->y = current_part->next->y;
         mvaddch(current_part->y, current_part->x, 'O');
@@ -228,6 +237,8 @@ void manage_snake(struct snake_part *current_part, int x, int y) {
     current_part->y = y;
     attroff(COLOR_PAIR(SNAKE_COLOUR));
     refresh();
+
+    return count;
 }
 
 struct snake_part *grow_snake(struct snake_part *snake_start) {
