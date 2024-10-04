@@ -50,7 +50,7 @@ int main(void) {
 
     getmaxyx(stdscr, y, x);
 
-    if (x < 183 || y < 32) {
+    if (x < 120 || y < 20) {
         endwin();
         printf("Screen too small. Try making the terminal window bigger or the terminal font smaller.\n");
         return 1;
